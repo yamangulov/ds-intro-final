@@ -27,11 +27,11 @@ class Form(BaseModel):
 
 class Prediction(BaseModel):
     id: int
-    pred: str
+    pred: int
 
 @app.post('/predict', response_model=Prediction)
 def predict(form: Form):
-    df = pd.DataFrame.from_dict([form.model_dump()])
+    df = pd.DataFrame.from_dict([form.model_dump()]).drop("id", axis=1)
     # известные значения входного датафрейма (одиночной строки) преобразуем в пригодные для модели
     # Получаем первую строку как Series
     row = df.iloc[0]
@@ -45,11 +45,12 @@ def predict(form: Form):
     feature_list = model['model'].feature_names_in_
     # Приводим DataFrame к нужному виду, добавляя отсутствующие признаки и заполняя их нулями
     df_full = df_new.reindex(columns=feature_list, fill_value=0)
-    pred = model['model'].predict(df_full)
-    return {
+    y = model['model'].predict(df_full)
+    result = {
         'id': form.id,
-        'pred': pred,
+        'pred': y[0],
     }
+    return result
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
